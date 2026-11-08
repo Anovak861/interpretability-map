@@ -13,5 +13,10 @@ data/synthetic.db
 .env.*
 
 # local state and generated data
-data/
+data/*
+!data/census/
+data/census/*
+!data/census/judgments.jsonl
+!data/census/lesswrong_ai.jsonl
+!data/census/openalex_state.json
 .claude/
