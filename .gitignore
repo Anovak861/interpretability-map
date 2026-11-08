@@ -15,6 +15,7 @@ data/synthetic.db
 # local state and generated data
 data/*
 !data/census/
+!data/export/
 data/census/*
 !data/census/judgments.jsonl
 !data/census/lesswrong_ai.jsonl
