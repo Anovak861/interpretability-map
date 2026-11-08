@@ -1,0 +1,36 @@
+{
+  "discovery": {
+    "initial_lookback_days": 21,
+    "arxiv": {
+      "enabled": true,
+      "phrases": [
+        "mechanistic interpretability", "sparse autoencoder", "sparse autoencoders", "transcoder",
+        "circuit discovery", "activation patching", "attribution patching", "linear representation hypothesis",
+        "steering vector", "representation engineering", "superposition", "logit lens", "probing classifier",
+        "induction head", "feature attribution language model", "interpretability language model",
+        "persona vector", "persona representations", "emergent misalignment", "assistant persona"
+      ],
+      "categories": ["cs.LG", "cs.CL", "cs.AI"],
+      "max_results": 300
+    },
+    "lesswrong": {
+      "enabled": true,
+      "tag_ids": ["56yXXrcxRjrQs6z9R"],
+      "min_karma": 40,
+      "min_karma_alignment_forum": 25,
+      "settle_days": 3
+    },
+    "transformer_circuits": {"enabled": true},
+    "citation_stubs": {"enabled": true, "min_citations": 3}
+  },
+  "triage": {
+    "batch_size": 40,
+    "min_relevance": 2
+  },
+  "update": {
+    "max_new_documents_per_run": 15,
+    "workers": 3,
+    "wave_size": 6,
+    "backend": "claude_cli"
+  }
+}

@@ -1,0 +1,10 @@
+[
+  {"url":"https://www.lesswrong.com/posts/JvZhhzycHu2Yd57RN", "title":"Causal Scrubbing: a method for rigorously testing interpretability hypotheses", "reason":"Foundational research post on testing causal explanations"},
+  {"url":"https://www.neelnanda.io/mechanistic-interpretability/attribution-patching", "title":"Attribution Patching: Activation Patching At Industrial Scale", "reason":"Original influential method post; lineage for scalable circuit discovery"},
+  {"url":"https://arxiv.org/abs/2310.10348", "title":"Attribution Patching Outperforms Automated Circuit Discovery", "reason":"Edge attribution patching baseline"},
+  {"url":"https://arxiv.org/abs/2403.17806", "title":"Have Faith in Faithfulness: Going Beyond Circuit Overlap When Finding Model Mechanisms", "reason":"EAP-IG and faithfulness evaluation"},
+  {"url":"https://arxiv.org/abs/2503.09532", "title":"SAEBench: A Comprehensive Benchmark for Sparse Autoencoders in Language Model Interpretability", "reason":"Broad SAE evaluation beyond reconstruction proxies"},
+  {"url":"https://arxiv.org/abs/2504.13151", "title":"MIB: A Mechanistic Interpretability Benchmark", "reason":"Benchmark spanning circuit and causal variable localization"},
+  {"url":"https://arxiv.org/abs/2409.14507", "title":"A is for Absorption: Studying Feature Splitting and Absorption in Sparse Autoencoders", "reason":"Important limitations of learned SAE features"},
+  {"url":"https://transformer-circuits.pub/2025/attention-qk/index.html", "title":"Tracing Attention Computation Through Feature Interactions", "reason":"Research post extending circuit tracing to attention"}
+]

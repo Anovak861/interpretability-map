@@ -1,0 +1,13 @@
+[
+  {"url": "https://transformer-circuits.pub/2021/framework/index.html", "note": "Transformer Circuits; residual stream & QK/OV circuits framework"},
+  {"url": "https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html", "note": "Transformer Circuits; induction heads"},
+  {"url": "https://arxiv.org/abs/2209.10652", "note": "arXiv; Toy Models of Superposition"},
+  {"url": "https://arxiv.org/abs/2211.00593", "note": "arXiv; IOI circuit, path patching"},
+  {"url": "https://arxiv.org/abs/2309.08600", "note": "arXiv; SAEs find interpretable features (Cunningham et al.)"},
+  {"url": "https://transformer-circuits.pub/2023/monosemantic-features/index.html", "note": "Transformer Circuits; Towards Monosemanticity"},
+  {"url": "https://arxiv.org/abs/2311.03658", "note": "arXiv; Linear Representation Hypothesis (Park et al.)"},
+  {"url": "https://arxiv.org/abs/2405.14860", "note": "arXiv; Not All Language Model Features Are Linear"},
+  {"url": "https://www.lesswrong.com/posts/jGuXSZgv6qfdhMCuJ/refusal-in-llms-is-mediated-by-a-single-direction", "note": "LessWrong; refusal direction"},
+  {"url": "https://arxiv.org/abs/2502.16681", "note": "arXiv; Are SAEs useful? sparse probing (critique)"},
+  {"manual": true, "note": "Tweet threads: save text to a file and run `cli.py add-manual` (no automatic fetch for X)"}
+]

@@ -1,0 +1,17 @@
+.venv/
+.runtime_deps/
+__pycache__/
+data/interp_map.db
+data/queue/
+data/.claude_runs/
+data/update.lock
+data/synthetic.db
+
+# never commit credentials
+.secrets/
+.env
+.env.*
+
+# local state and generated data
+data/
+.claude/
