@@ -1,24 +1,24 @@
 # How big is the interpretability / alignment experimental literature, and what would ingesting it cost?
 
-Estimated 2026-11-07; crawl, judging and recall updated 2026-11-08 with an OpenAlex key. Everything here is reproducible from the scripts named in each step; raw
+Estimated 2026-11-07; crawl, judging and recall updated 2026-11-08/09 with an OpenAlex key and the full arXiv CS harvest. Everything here is reproducible from the scripts named in each step; raw
 data is in `data/census/`.
 
 **Short answer.**
 
 | | Point estimate | Plausible range |
 |---|---|---|
-| Experimental papers in scope (all years) | ~16,000 | 9,000 – 50,000 |
+| Experimental papers in scope (all years) | ~18,000 | 9,000 – 50,000 |
 | Experimental LessWrong / AF posts | ~1,400 | 900 – 2,100 |
-| Not yet in the map (~770 already ingested) | ~16,600 | 9,000 – 53,000 |
+| Not yet in the map (~770 already ingested) | ~18,600 | 9,000 – 53,000 |
 | Pro-plan throughput (Opus extraction, incl. ~15% overhead) | ~175 docs/week | 175 – 260 |
-| **Backlog on Pro alone** | **~95 weeks** | 35 – 300 weeks |
-| New experimental work published | ~120 papers + ~7 posts / week | 100 – 150 papers / week |
-| **Keeping up with the flow on Pro** | **~75% of each week's limit** | 40% – 90% |
+| **Backlog on Pro alone** | **~105 weeks** | 35 – 300 weeks |
+| New experimental work published | ~150 papers + ~7 posts / week | 100 – 185 papers / week |
+| **Keeping up with the flow on Pro** | **~90% of each week's limit** | 40% – 110% |
 
 The range's high end comes almost entirely from one thing: 609,000 later-hop works with no
 keyword hit, where 0 of 300 sampled were in scope but the sample can't rule out ~1.8%.
 
-Pro can roughly keep up with new work but not clear the backlog; see the last section for ways
+Pro can only just keep up with new work, and can't clear the backlog; see the last section for ways
 to change that.
 
 ---
@@ -153,6 +153,24 @@ of both ranges, about 50,000 at the pessimistic ends).
 This leans on the LW-linked papers being a fair sample. They skew toward prominent work, which
 a citation crawl finds more easily, so the true total is more likely above 16,000 than below it.
 
+**Second check: the full arXiv CS harvest.** `scripts/census_overlap.py` takes the 59,878 arXiv
+CS papers matching the language-model keyword labels and counts how many the crawl reached:
+
+| first submitted | matching on arXiv | in crawl | coverage |
+|---|---|---|---|
+| 2019–2024 | 13,642 | 9,539 | 70% |
+| 2025 | 16,981 | 9,244 | 54% |
+| 2026 to Nov 8 | 29,126 | 12,915 | 44% |
+
+For 2019–2024 this agrees with the LessWrong check (~73%). For recent papers it is lower. The
+keyword set is noisier than the set of truly in-scope papers, and off-topic matches are less
+likely to be cited by relevant work, so this probably understates recall. The LessWrong set skews
+prominent, so it probably overstates recall. The two bracket the answer.
+
+Applying these rates by year (crawl-found non-seed works: 3,785 through 2024, 2,941 in 2025,
+3,625 in 2026) gives ~19,100, or **~20,200 with the seeds**, against ~16,000 from the LessWrong
+check. **I use ~18,000, the midpoint.**
+
 ## 5. LessWrong / Alignment Forum
 
 `scripts/census_lesswrong.py` paged through all 40,774 posts since 2016; **16,023 carry the AI
@@ -179,8 +197,11 @@ of these year counts, a small undercount. Sanity check: the map's own arXiv sear
 phrases, mostly interpretability, so it's narrow. In October 2026 it found 119 papers, and
 triage kept 64%. That's ~76 per month from that slice alone.
 
-**Flow ≈ 100–150 papers/week (central ~120) + ~7 posts/week**, which is about 75% of Pro's
-~175 docs/week (about 50% if throughput is 260/week; ~90% at the high end of flow).
+The arXiv coverage check gives a higher figure for 2026: 3,625 ÷ 44% ≈ 8,200, or **~185/week**
+(2025: 2,941 ÷ 54% ≈ 5,400, ~105/week).
+
+**Flow ≈ 120–185 papers/week (central ~150) + ~7 posts/week**, which is about 90% of Pro's
+~175 docs/week (about 60% if throughput is 260/week; ~110% at the high end of flow).
 
 Rough split, from the keyword labels of judged-experimental works in the first round: about 55% alignment/safety
 (jailbreaks, refusal, RLHF failure modes, evals), 30% interpretability, and 15% unlabelled.
@@ -189,9 +210,9 @@ roughly halve.
 
 ## 7. What would change the numbers
 
-| lever | effect on the ~95-week backlog |
+| lever | effect on the ~105-week backlog |
 |---|---|
-| Max 5x plan | ~19 weeks |
+| Max 5x plan | ~21 weeks |
 | Max 20x plan | ~5 weeks |
 | Cap full text at ~30k tokens (abstract, intro, results), from ~90k | likely ~2x cheaper per doc; measure quality first with `scripts/compare_extraction_models.py` |
 | Two tiers: full extraction for important/cited works, abstract-only for the long tail | most of the long tail costs ~1/10 per doc |
@@ -205,10 +226,9 @@ roughly halve.
   `scripts/census_citations.py` resumes it (10,000 requests/day). New hop-3 works are less
   cited and probably lower-yield than those sampled here, so the recall check is the better
   guide to whether more crawling is worth it.
-- **arXiv harvest stalled:** the full arXiv harvest (`scripts/census_arxiv.py`) stopped at
-  mid-2021 because arXiv's endpoints were timing out or returning HTTP 500 today. Once it
-  completes, a capture–recapture between the arXiv keyword set and the crawl would replace
-  the LW-based recall, which is the weakest number here.
+- **arXiv cross-check is keyword-level:** the comparison covers keyword matches, not judged
+  in-scope papers. Judging a sample of arXiv matches the crawl missed would replace the bracket
+  with a single recall figure. Papers whose OpenAlex record has no arXiv id count as misses here.
 - **Few positives in key strata:** the later "no keyword hit" strata had no positives in 150
   samples each. Larger samples there would narrow the high end most, at ~$0.13 per 40 items.
 - **Judge vs. map scope:** "in scope" is the judge's call. It matches the map's inclusion rate,
