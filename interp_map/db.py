@@ -17,9 +17,9 @@ DEFAULT_DB = Path(os.environ.get("INTERP_MAP_DB") or ROOT / "data" / "interp_map
 SCHEMA = Path(__file__).with_name("schema.sql")
 
 
-def connect(path: Path = DEFAULT_DB) -> sqlite3.Connection:
+def connect(path: Path = DEFAULT_DB, *, check_same_thread: bool = True) -> sqlite3.Connection:
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path)
+    conn = sqlite3.connect(path, check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
@@ -28,6 +28,7 @@ def connect(path: Path = DEFAULT_DB) -> sqlite3.Connection:
 def init(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA.read_text(encoding="utf-8"))
     _add_column(conn, "documents", "curated", "INTEGER NOT NULL DEFAULT 0")
+    _add_column(conn, "claims", "level", "TEXT")   # paradigm / thesis / finding; NULL = not sorted yet
     conn.execute("INSERT OR IGNORE INTO users (handle, display_name) VALUES ('me', 'Me')")
     conn.commit()
 
@@ -332,7 +333,8 @@ def merge(conn, kind: str, from_slug: str, into_slug: str) -> None:
                      ("document_links", "cited_id"), ("document_aliases", "document_id"),
                      ("document_title_aliases", "document_id")],
         "claim": [("claim_concepts", "claim_id"), ("claim_dependencies", "claim_id"),
-                  ("claim_dependencies", "depends_on_id"), ("claim_evidence", "claim_id")],
+                  ("claim_dependencies", "depends_on_id"), ("claim_evidence", "claim_id"),
+                  ("claim_links", "finding_id"), ("claim_links", "parent_id")],
         "concept": [("concept_relations", "child_id"), ("concept_relations", "parent_id"),
                     ("document_concepts", "concept_id"), ("claim_concepts", "concept_id")],
     }[kind]
@@ -357,6 +359,7 @@ def merge(conn, kind: str, from_slug: str, into_slug: str) -> None:
         conn.execute("UPDATE vocab_aliases SET new_slug = ? WHERE kind = ? AND new_slug = ?", (into_slug, kind, from_slug))
         conn.execute("INSERT OR REPLACE INTO vocab_aliases VALUES (?, ?, ?)", (kind, from_slug, into_slug))
         conn.execute("DELETE FROM claim_dependencies WHERE claim_id = depends_on_id")
+        conn.execute("DELETE FROM claim_links WHERE finding_id = parent_id")
         if kind == "claim":
             break_dependency_cycles(conn)  # merged dependencies can close a loop
         conn.execute("DELETE FROM concept_relations WHERE child_id = parent_id")

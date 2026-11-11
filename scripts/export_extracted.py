@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "data" / "export"
 TABLES = ["documents", "document_aliases", "document_title_aliases", "document_authors", "document_links",
           "document_concepts", "authors", "author_aliases", "claims", "claim_evidence", "claim_dependencies",
-          "claim_concepts", "concepts", "concept_relations", "vocab_aliases"]
+          "claim_concepts", "claim_links", "concepts", "concept_relations", "vocab_aliases"]
 OMIT = {"documents": {"full_text"}}
 
 

@@ -238,3 +238,14 @@ CREATE INDEX IF NOT EXISTS idx_evidence_claim ON claim_evidence(claim_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_doc   ON claim_evidence(document_id);
 CREATE INDEX IF NOT EXISTS idx_links_cited    ON document_links(cited_id);
 CREATE INDEX IF NOT EXISTS idx_annot_target   ON annotations(target_type, target_id);
+
+-- Claim levels (claims.level, added in db.init): 'paradigm', 'thesis' (a broad claim) or 'finding'
+-- (one experiment). A finding hangs under the paradigm or thesis it bears on.
+CREATE TABLE IF NOT EXISTS claim_links (
+    finding_id INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    parent_id  INTEGER NOT NULL REFERENCES claims(id) ON DELETE CASCADE,
+    stance     TEXT NOT NULL CHECK (stance IN ('supports','contradicts','qualifies','applies')),
+    provenance TEXT,
+    PRIMARY KEY (finding_id, parent_id)
+);
+CREATE INDEX IF NOT EXISTS idx_claim_links_parent ON claim_links(parent_id);

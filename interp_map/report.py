@@ -2,13 +2,14 @@
 from claim evidence, claim dependencies and the concept graph."""
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
 POSITIVE = {"supports", "replicates"}
 NEGATIVE = {"refutes", "fails_to_replicate"}
 TESTED = POSITIVE | NEGATIVE | {"mixed"}
 WEAK_STATUSES = {"untested", "single_source", "contested"}
+STANCE_AS = {"supports": "supports", "contradicts": "refutes", "qualifies": "mixed"}
 
 
 @dataclass
@@ -26,6 +27,8 @@ class ClaimHealth:
     critiqued_by: int = 0        # arguments against it without new experiments
     depended_on_by: int = 0      # claims (transitively) that presuppose it
     concepts: list[str] = field(default_factory=list)
+    level: str | None = None     # paradigm / thesis / finding
+    findings: int = 0            # findings filed under this claim
 
     @property
     def load(self) -> int:
@@ -64,6 +67,20 @@ def claim_health(conn) -> dict[int, ClaimHealth]:
         # a paper that proposes a claim and presents evidence for it is that claim's first test
         relation = "supports" if r[2] == "proposes" and r[3] else r[2]
         evidence[r[0]].append((r[1], relation, r[3]))
+
+    # findings filed under a broader claim count as that claim's evidence, read through their stance
+    has = lambda t: conn.execute("SELECT 1 FROM sqlite_master WHERE name = ?", (t,)).fetchone()
+    levels = dict(conn.execute("SELECT id, level FROM claims").fetchall()) if has("claim_links") else {}
+    findings = Counter()
+    if has("claim_links"):
+        own = {k: list(v) for k, v in evidence.items()}
+        for finding, parent, stance in conn.execute("SELECT finding_id, parent_id, stance FROM claim_links"):
+            findings[parent] += 1
+            for doc, rel, strength in own.get(finding, []):
+                if stance == "applies" or rel in ("assumes", "proposes", "extends"):
+                    evidence[parent].append((doc, "assumes", None))
+                elif rel in POSITIVE:
+                    evidence[parent].append((doc, STANCE_AS[stance], strength))
 
     deps = defaultdict(set)  # depends_on -> {claims that depend on it}
     for r in conn.execute("SELECT claim_id, depends_on_id FROM claim_dependencies"):
@@ -111,6 +128,7 @@ def claim_health(conn) -> dict[int, ClaimHealth]:
             assumed_by=len({d for d, rel, _ in ev if rel == "assumes"}),
             critiqued_by=len({d for d, rel, _ in ev if rel == "critiques"}),
             depended_on_by=len(seen), concepts=concepts[row["id"]],
+            level=levels.get(row["id"]), findings=findings[row["id"]],
         )
     return out
 

@@ -593,3 +593,38 @@ a.btn.primary { color: var(--on-accent); }
 .cs-target .statement { font-size: 15px; color: var(--text); }
 .cs-members { list-style: none; margin: 6px 0 4px; padding: 0 0 0 12px; border-left: 2px solid var(--border); display: grid; gap: 4px; font-size: 13px; }
 .cs-members li { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------------- claim hierarchy */
+.level { font-size: 11px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); }
+.level-paradigm { color: var(--accent); }
+.level-thesis { color: var(--st-supported); }
+.section-h { font-size: 16px; font-weight: 650; margin: 26px 0 10px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.section-h .hint { font-weight: 400; font-size: 13px; color: var(--faint); }
+.stance-supports { background: var(--rel-positive); }
+.stance-contradicts { background: var(--rel-negative); }
+.stance-qualifies { background: var(--st-single_source); }
+.stance-applies { background: var(--border-strong); }
+.stance-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--surface-2); }
+.stance-bar i { display: block; }
+.stance-bar.empty-bar { background: repeating-linear-gradient(90deg, var(--border) 0 6px, transparent 6px 12px); }
+.stance-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+.stance-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.stance-h { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; margin: 16px 0 2px; }
+.stance-h .count { color: var(--faint); font-weight: 500; }
+.stance-tag { background: none; font-size: 12px; font-weight: 600; text-transform: capitalize; }
+.stance-tag.stance-supports { color: var(--rel-positive); } .stance-tag.stance-contradicts { color: var(--rel-negative); }
+.stance-tag.stance-qualifies { color: var(--st-single_source); } .stance-tag.stance-applies { color: var(--muted); }
+.paradigm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+.paradigm { text-align: left; font: inherit; color: inherit; cursor: pointer; background: var(--accent-soft); border: 1px solid var(--border);
+  border-bottom: 3px solid var(--accent); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 10px; align-content: space-between; }
+.paradigm.on { border-color: var(--accent); box-shadow: var(--shadow); }
+.paradigm.dim { opacity: .4; }
+.paradigm .statement, .thesis .statement { font-size: 14px; line-height: 1.4; display: block; }
+.paradigm .meta, .thesis .meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.paradigm .open { margin-left: auto; }
+.thesis-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 10px; }
+.thesis { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 9px;
+  align-content: start; color: inherit; text-decoration: none; }
+.thesis:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+.paradigm:focus-visible, .thesis:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }

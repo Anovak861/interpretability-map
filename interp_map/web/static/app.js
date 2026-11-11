@@ -127,6 +127,7 @@ function notesPanel(targetType, slug, notes) {
 
 const routes = {
   "": renderOverview,
+  foundations: renderFoundations, // structure.js
   concepts: renderConcepts,
   concept: renderConcept,
   claims: renderClaims,
@@ -333,15 +334,17 @@ async function renderConcept(slug) {
   const k = await api(`/api/concepts/${enc(slug)}`);
   app.className = "";
   const h = k.health || {};
-  let showAll = true;
+  let showAll = true, showFindings = false;
+  const nTop = k.claims.filter((c) => c.level !== "finding").length;
   const claimsTable = () => {
-    const rows = k.claims.filter((c) => showAll || c.direct)
-      .sort((a, b) => STATUSES.indexOf(a.status) - STATUSES.indexOf(b.status) || b.load - a.load);
+    const rank = { paradigm: 0, thesis: 1 };
+    const rows = k.claims.filter((c) => (showAll || c.direct) && (showFindings || c.level !== "finding"))
+      .sort((a, b) => (rank[a.level] ?? 2) - (rank[b.level] ?? 2) || b.load - a.load || STATUSES.indexOf(a.status) - STATUSES.indexOf(b.status));
     return rows.length ? `<table class="list stack-sm"><tbody>${rows.map((c) => `
       <tr class="clickable" data-href="#/claim/${enc(c.slug)}">
         <td style="width:120px">${pill(c.status)}</td>
         <td class="claim-cell"><div class="statement" style="font-size:14px">${esc(c.statement)}</div>
-          ${c.direct ? "" : `<div class="slug">via sub-concept: ${esc(c.concepts.join(", "))}</div>`}</td>
+          <div class="slug">${levelTag(c.level)}${c.findings ? ` ${plural(c.findings, "finding")}` : ""}${c.direct ? "" : ` · via sub-concept: ${esc(c.concepts.join(", "))}`}</div></td>
         <td class="num small">${evidenceLine(c)}${c.fragile ? `<div class="tag-flag">fragile</div>` : ""}</td>
       </tr>`).join("")}</tbody></table>` : `<div class="empty">No claims ${showAll ? "" : "directly "}tagged with this concept.</div>`;
   };
@@ -367,8 +370,9 @@ async function renderConcept(slug) {
           ${legend(h.statuses || {})}
         </div>
         <div class="card">
-          <h2>Claims <span class="count">${k.claims.length}</span>
-            <span class="hint"><label><input type="checkbox" id="incl" checked> include sub-concepts</label></span></h2>
+          <h2>Claims <span class="count">${nTop} broad · ${k.claims.length - nTop} findings</span>
+            <span class="hint"><label><input type="checkbox" id="findings-too"> show findings</label>
+              <label style="margin-left:10px"><input type="checkbox" id="incl" checked> include sub-concepts</label></span></h2>
           <div id="claims-table">${claimsTable()}</div>
         </div>
         <div class="card">
@@ -390,12 +394,13 @@ async function renderConcept(slug) {
       </div>
     </div>`;
   $("#incl").addEventListener("change", (e) => { showAll = e.target.checked; $("#claims-table").innerHTML = claimsTable(); });
+  $("#findings-too").addEventListener("change", (e) => { showFindings = e.target.checked; $("#claims-table").innerHTML = claimsTable(); });
   wireConceptCuration(k);
 }
 
 /* ================================================================ claims */
 
-const claimFilters = { statuses: new Set(), concept: "", q: "", fragile: false, sort: "load" };
+const claimFilters = { statuses: new Set(), concept: "", q: "", fragile: false, sort: "load", level: "top" };
 
 async function renderClaims() {
   const [claims, concepts] = await Promise.all([api("/api/claims"), api("/api/concepts")]);
@@ -407,13 +412,18 @@ async function renderClaims() {
     while (stack.length) (children[stack.pop()] || []).forEach((c) => { if (!out.has(c)) { out.add(c); stack.push(c); } });
     return out;
   };
-  const counts = {};
-  claims.forEach((c) => (counts[c.status] = (counts[c.status] || 0) + 1));
+  const inLevel = (c) => ({ all: true, top: c.level === "paradigm" || c.level === "thesis" }[claimFilters.level] ?? c.level === claimFilters.level);
+  const countStatuses = () => { const n = {}; claims.filter(inLevel).forEach((c) => (n[c.status] = (n[c.status] || 0) + 1)); return n; };
+  let counts = countStatuses();
   const conceptOpts = concepts.nodes.filter((n) => n.claims).sort((a, b) => a.name.localeCompare(b.name));
 
   app.innerHTML = `
     <div class="page-head">
       <div><h1>Claims</h1><p>Each claim stands apart from any single document. Its status comes from the evidence attached to it.</p></div>
+    </div>
+    <div class="toolbar">
+      <div class="seg" id="clevel">${[["top", "Paradigms and broad claims"], ["finding", "Findings"], ["all", "All"]].map(([v, l]) =>
+        `<button type="button" data-level="${v}" class="${claimFilters.level === v ? "on" : ""}">${l}</button>`).join("")}</div>
     </div>
     <div class="toolbar">
       <input type="search" id="cq" placeholder="Filter claims…" value="${esc(claimFilters.q)}">
@@ -426,7 +436,7 @@ async function renderClaims() {
     </div>
     <div class="toolbar">${STATUSES.map((s) => `
       <button class="filter-chip st-${s} ${claimFilters.statuses.has(s) ? "on" : ""}" data-status="${s}" title="${esc(STATUS_HELP[s])}">
-        ${STATUS_LABEL[s]} <span class="n">${counts[s] || 0}</span></button>`).join("")}
+        ${STATUS_LABEL[s]} <span class="n" data-count="${s}">${counts[s] || 0}</span></button>`).join("")}
     </div>
     <div class="card" id="claims-list"></div>`;
 
@@ -434,7 +444,7 @@ async function renderClaims() {
     const f = claimFilters;
     const within = f.concept ? descendants(f.concept) : null;
     const q = f.q.toLowerCase();
-    let rows = claims.filter((c) =>
+    let rows = claims.filter((c) => inLevel(c) &&
       (!f.statuses.size || f.statuses.has(c.status)) && (!f.fragile || c.fragile) &&
       (!within || c.concepts.some((k) => within.has(k))) &&
       (!q || c.statement.toLowerCase().includes(q) || c.slug.includes(q)));
@@ -452,13 +462,20 @@ async function renderClaims() {
         <tbody>${rows.map((c) => `
           <tr class="clickable" data-href="#/claim/${enc(c.slug)}">
             <td style="width:120px">${pill(c.status)}</td>
-            <td class="claim-cell"><div class="statement">${esc(c.statement)}</div><div class="slug">${esc(c.slug)} · ${esc(c.claim_type)}</div></td>
+            <td class="claim-cell"><div class="statement">${esc(c.statement)}</div><div class="slug">${levelTag(c.level)} ${esc(c.claim_type)}${c.findings ? ` · ${plural(c.findings, "finding")}` : ""}</div></td>
             <td class="num small">${evidenceLine(c)}</td>
             <td class="num hide-sm">${c.load ? `${c.load}${c.fragile ? ` <span class="tag-flag">fragile</span>` : ""}` : `<span class="faint">0</span>`}</td>
           </tr>`).join("")}</tbody>
       </table>` : `<div class="empty">No claims match these filters.</div>`;
   };
   draw();
+  $$("#clevel button").forEach((b) => b.addEventListener("click", () => {
+    claimFilters.level = b.dataset.level;
+    $$("#clevel button").forEach((x) => x.classList.toggle("on", x === b));
+    counts = countStatuses();
+    $$("[data-count]").forEach((n) => (n.textContent = counts[n.dataset.count] || 0));
+    draw();
+  }));
   $("#cq").addEventListener("input", (e) => { claimFilters.q = e.target.value; draw(); });
   $("#cconcept").addEventListener("change", (e) => { claimFilters.concept = e.target.value; draw(); });
   $("#csort").addEventListener("change", (e) => { claimFilters.sort = e.target.value; draw(); });
@@ -481,11 +498,13 @@ async function renderClaim(slug) {
     supports: "--rel-positive", replicates: "--rel-positive", refutes: "--rel-negative", fails_to_replicate: "--rel-negative",
     mixed: "--rel-mixed", assumes: "--rel-assumes", proposes: "--rel-proposes", extends: "--rel-extends", critiques: "--rel-critiques",
   }[r] || "--border-strong");
+  const restsOn = c.depends_on_claims.filter((x) => x.level === "paradigm");
+  const dependsOn = c.depends_on_claims.filter((x) => x.level !== "paradigm");
   const claimLink = (x) => `<li><span style="width:118px;flex-shrink:0">${pill(x.status)}</span>
     <span class="lbl"><a href="#/claim/${enc(x.slug)}" class="statement" style="font-size:14px">${esc(x.statement)}</a></span></li>`;
 
   app.innerHTML = `
-    <div class="eyebrow">Claim · ${esc(c.claim_type)}</div>
+    <div class="eyebrow">${LEVEL_LABEL[c.level] || "Claim"} · ${esc(c.claim_type)}</div>
     <h1 class="claim-title">${esc(c.statement)}</h1>
     <div class="meta-row" style="margin-bottom:20px">
       ${pill(c.status)}
@@ -507,9 +526,11 @@ async function renderClaim(slug) {
           </div>
           ${c.scope ? `<p class="small muted" style="margin:12px 0 0"><b>Scope:</b> ${esc(c.scope)}</p>` : ""}
           ${c.critiqued_by ? `<p class="small" style="margin:8px 0 0;color:var(--rel-critiques)">Critiqued by ${plural(c.critiqued_by, "document")} without new experiments.</p>` : ""}
+          ${c.findings ? `<p class="small muted" style="margin:8px 0 0">Counts include the papers behind the findings filed under this claim.</p>` : ""}
         </div>
+        ${hierarchyCards(c)}
         <div class="card">
-          <h2>Evidence over time <span class="count">${ev.length}</span></h2>
+          <h2>${c.findings ? "Papers that address it directly" : "Evidence over time"} <span class="count">${ev.length}</span></h2>
           <ol class="timeline">${ev.map((e) => `
             <li style="--rel-c: var(${relColor(e.relation)})">
               <div class="when">${fmtDate(e.published_date) || "undated"} · ${src(e.source)}${e.strength ? ` · ${esc(e.strength)} evidence` : ""}</div>
@@ -525,9 +546,13 @@ async function renderClaim(slug) {
           <h2>Concepts</h2>
           <div class="chips">${c.concept_details.map((k) => conceptChip(k)).join("") || `<span class="empty">None</span>`}</div>
         </div>
+        ${restsOn.length ? `<div class="card">
+          <h2>Rests on <span class="count">${restsOn.length}</span><span class="hint">paradigms it takes for granted</span></h2>
+          <ul class="link-list">${restsOn.map(claimLink).join("")}</ul>
+        </div>` : ""}
         <div class="card">
-          <h2>Depends on <span class="count">${c.depends_on_claims.length}</span></h2>
-          ${c.depends_on_claims.length ? `<ul class="link-list">${c.depends_on_claims.map(claimLink).join("")}</ul>` : `<div class="empty">Nothing; this claim stands on its own.</div>`}
+          <h2>Depends on <span class="count">${dependsOn.length}</span></h2>
+          ${dependsOn.length ? `<ul class="link-list">${dependsOn.map(claimLink).join("")}</ul>` : `<div class="empty">${restsOn.length ? "No other claims." : "Nothing; this claim stands on its own."}</div>`}
         </div>
         <div class="card">
           <h2>Relied on by <span class="count">${c.dependent_claims.length}</span></h2>

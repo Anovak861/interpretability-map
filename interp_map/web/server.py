@@ -41,7 +41,9 @@ async def curation_error(request: Request, exc: curation.CurationError):
 
 
 def get_conn():
-    conn = db.connect()
+    # one connection per request, but the framework may open it on a different worker thread
+    # than the one that runs the endpoint
+    conn = db.connect(check_same_thread=False)
     try:
         yield conn
     finally:
@@ -75,7 +77,7 @@ def _health_dict(h: report.ClaimHealth) -> dict:
             "positive": h.positive_docs, "negative": h.negative_docs, "mixed": h.mixed_docs,
             "groups": h.independent_groups, "assumed_by": h.assumed_by, "critiqued_by": h.critiqued_by,
             "dependents": h.depended_on_by, "load": h.load, "fragile": h.fragile_foundation,
-            "concepts": h.concepts}
+            "concepts": h.concepts, "level": h.level, "findings": h.findings}
 
 
 def _doc_summary(r, authors) -> dict:
@@ -226,7 +228,34 @@ def get_claim(slug: str, conn=Depends(get_conn)):
             "SELECT k.slug, k.name FROM claim_concepts cc JOIN concepts k ON k.id = cc.concept_id WHERE cc.claim_id = ?",
             (c["id"],))],
         "notes": _notes(conn, "claim", c["id"]),
+        # the hierarchy: what this claim is filed under, and what is filed under it
+        "filed_under": [{**_health_dict(by_id[r[0]]), "stance": r[1]} for r in conn.execute(
+            "SELECT parent_id, stance FROM claim_links WHERE finding_id = ?", (c["id"],))],
+        "filed_findings": [{**_health_dict(by_id[r[0]]), "stance": r[1]} for r in conn.execute(
+            "SELECT finding_id, stance FROM claim_links WHERE parent_id = ?", (c["id"],))],
     }
+
+
+@app.get("/api/foundations")
+def foundations(conn=Depends(get_conn)):
+    """Paradigms and broad claims, with what each rests on and how its findings split by stance."""
+    health = {h.id: h for h in report.claim_health(conn).values()}
+    top = {i: h for i, h in health.items() if h.level in ("paradigm", "thesis")}
+    stances = {i: {} for i in top}
+    for parent, stance, n in conn.execute("SELECT parent_id, stance, COUNT(*) FROM claim_links GROUP BY 1, 2"):
+        if parent in stances:
+            stances[parent][stance] = n
+    rests, needs = {i: [] for i in top}, {i: [] for i in top}
+    for a, b in conn.execute("SELECT claim_id, depends_on_id FROM claim_dependencies"):
+        if a in top and b in top:
+            (rests if top[b].level == "paradigm" else needs)[a].append(top[b].slug)
+    names = dict(conn.execute("SELECT slug, name FROM concepts"))
+    loose = conn.execute("SELECT COUNT(*) FROM claims c WHERE level = 'finding' AND NOT EXISTS "
+                         "(SELECT 1 FROM claim_links l WHERE l.finding_id = c.id)").fetchone()[0]
+    return {"claims": [{**_health_dict(h), "stances": stances[i], "rests_on": rests[i], "depends_on": needs[i]}
+                       for i, h in top.items()],
+            "concept_names": names, "unplaced_findings": loose,
+            "findings": conn.execute("SELECT COUNT(*) FROM claims WHERE level = 'finding'").fetchone()[0]}
 
 
 class StatusIn(BaseModel):
