@@ -284,7 +284,10 @@ def list_concepts(conn=Depends(get_conn)):
     edges = [dict(r) for r in conn.execute(
         "SELECT c.slug AS child, p.slug AS parent, r.relation FROM concept_relations r "
         "JOIN concepts c ON c.id = r.child_id JOIN concepts p ON p.id = r.parent_id")]
-    return {"nodes": nodes, "edges": edges, "regions": _regions_out(rg, health, include_minor=True)}
+    # "edges" is the tree (each concept's place); "links" are the cross-links between concepts
+    return {"nodes": nodes, "edges": [e for e in edges if e["relation"] == "subtopic_of"],
+            "links": [e for e in edges if e["relation"] != "subtopic_of"],
+            "regions": _regions_out(rg, health, include_minor=True)}
 
 
 def _regions_out(rg: dict, health: dict, include_minor: bool = False) -> list[dict]:

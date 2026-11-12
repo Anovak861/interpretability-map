@@ -96,7 +96,7 @@ def batches(conn) -> list[dict]:
     docs = dict(conn.execute("SELECT claim_id, COUNT(DISTINCT document_id) FROM claim_evidence GROUP BY claim_id"))
     names = dict(conn.execute("SELECT id, name FROM concepts"))
     parents = defaultdict(set)
-    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations"):
+    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations WHERE relation = 'subtopic_of'"):
         parents[child].add(parent)
     tagged = defaultdict(set)   # concept -> claims tagged directly
     claim_concepts = defaultdict(set)

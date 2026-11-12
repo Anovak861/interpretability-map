@@ -52,6 +52,12 @@ class ClaimRef(BaseModel):
     experiment_summary: Optional[str] = None
     models_studied: list[str] = Field(default_factory=list)
     location: Optional[str] = None
+    # for NEW claims only; ignored when the slug already exists
+    level: Optional[Literal["thesis", "finding"]] = Field(
+        None, description="thesis = a broad claim other papers could test; finding = one result of this document")
+    under: Optional[str] = Field(None, description="for a finding: slug of the existing broad claim or paradigm it bears on")
+    stance: Optional[Literal["supports", "contradicts", "qualifies", "applies"]] = Field(
+        None, description="for a finding with `under`: how it bears on that claim")
 
 
 class ReferenceRef(BaseModel):

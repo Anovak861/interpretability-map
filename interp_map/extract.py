@@ -59,6 +59,9 @@ Guidelines
   Mark 1-3 as role "primary".
 - claims: the load-bearing claims this document touches, phrased so they stand alone
   independent of this document (other papers will attach evidence to the same claim).
+  The map sorts claims into levels: "paradigm" (an assumption much work takes for granted),
+  "thesis" (a broad claim independent papers can test) and "finding" (one result of one
+  document). The existing claims shown are the map's paradigms and theses.
   REUSE existing claim slugs when the document bears on an existing claim. For each, set
   `relation` = how THIS document relates to it:
     proposes (first states it; if it also presents evidence, set `strength` and
@@ -90,9 +93,22 @@ Guidelines
   substantive, reusable contribution.
 - Reuse first: before proposing a claim, check the existing claims shown; attach evidence
   to an existing claim whenever this document tests, extends, assumes or disputes it,
-  even if the document's setting is narrower. Propose at most 4 new claims (relation
-  proposes) per document, usually fewer; a document's distinctive findings should mostly
-  appear as evidence on existing claims.
+  even if the document's setting is narrower. A document's results should mostly appear
+  as evidence on existing claims.
+- New claims carry a `level`:
+  - "thesis": a general claim this document introduces that other papers could test, and
+    that no existing claim covers. At most 3 per document, usually fewer. A thesis may
+    start with only this document's evidence; later papers will add to it.
+  - "finding": a result of this document that deserves its own statement because it says
+    something more specific than the broad claim it bears on: a boundary condition, a
+    contradiction in a particular setting, or a distinctive result readers would look for.
+    At most 6 per document. Set `under` to the slug of the existing claim (or of a new
+    thesis in this extraction) it bears on, and `stance`: supports or contradicts (it
+    tests that claim), qualifies (it narrows or bounds it), applies (it relies on it
+    without testing it). A result against a claim must be "contradicts". Leave `under`
+    null only when nothing fits; do not force a parent.
+  A plain test of an existing claim is NOT a finding: attach it to that claim directly.
+  Leave `level`, `under` and `stance` null when reusing an existing slug.
 - Scope honesty without narrow claims: when evidence covers only part of a claim (one
   model family, metric, baseline or intervention), attach it to the claim anyway with
   strength reflecting that coverage (weak or moderate) and an experiment_summary that

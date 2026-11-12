@@ -108,12 +108,12 @@ def update_concept(conn, slug: str, *, name: str, kind: str, description: Option
     parent_ids = [_id(conn, "concept", p) for p in dict.fromkeys(parents)]
     for p, pslug in zip(parent_ids, dict.fromkeys(parents)):
         # a parent can't also be a descendant
-        if p == cid or cid in _ancestors(conn, "SELECT parent_id FROM concept_relations WHERE child_id = ?", p):
+        if p == cid or cid in _ancestors(conn, "SELECT parent_id FROM concept_relations WHERE relation = 'subtopic_of' AND child_id = ?", p):
             raise CurationError(f"{pslug} is already under {slug}; making it a parent would create a loop")
     before = dict(conn.execute("SELECT name, kind, description FROM concepts WHERE id = ?", (cid,)).fetchone())
     conn.execute("UPDATE concepts SET name = ?, kind = ?, description = ? WHERE id = ?",
                  (name.strip(), kind, (description or "").strip() or None, cid))
-    conn.execute("DELETE FROM concept_relations WHERE child_id = ?", (cid,))
+    conn.execute("DELETE FROM concept_relations WHERE relation = 'subtopic_of' AND child_id = ?", (cid,))
     conn.executemany("INSERT INTO concept_relations (child_id, parent_id) VALUES (?, ?)", [(cid, p) for p in parent_ids])
     log(conn, "edit", "concept", slug, {"before": before, "parents": parents})
     conn.commit()

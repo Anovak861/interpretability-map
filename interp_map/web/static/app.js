@@ -262,7 +262,7 @@ async function renderConcepts() {
   app.innerHTML = `
     <div class="page-head">
       <div><h1>Concepts</h1>
-        <p>Concepts form a graph rather than a tree: a concept can build on several foundations. Health counts include each concept's sub-concepts.</p></div>
+        <p>Each concept has one place in this tree. What it builds on and what sits beside it are shown on its own page. Health counts include each concept's sub-concepts.</p></div>
       <div class="actions"><div class="seg" role="tablist">
         <button data-view="outline" class="${conceptView === "outline" ? "on" : ""}">Outline</button>
         <button data-view="graph" class="${conceptView === "graph" ? "on" : ""}">Graph</button>
@@ -335,6 +335,15 @@ async function renderConcept(slug) {
   app.className = "";
   const h = k.health || {};
   let showAll = true, showFindings = false;
+  const of = (list, ...types) => list.filter((x) => types.includes(x.relation));
+  const treeParents = of(k.parents, "subtopic_of"), subConcepts = of(k.children, "subtopic_of");
+  const hood = [
+    ["Built on", "what it needs to make sense", of(k.parents, "builds_on")],
+    ["Studied with", "methods, tools and benchmarks", of(k.parents, "uses")],
+    ["Built on top of it", "ideas that need this one", of(k.children, "builds_on")],
+    ["Used to study", "where this is the tool", of(k.children, "uses")],
+    ["Beside it", "related ideas, no dependence either way", [...of(k.parents, "related_to", "alternative_to"), ...of(k.children, "related_to", "alternative_to")]],
+  ].filter(([, , items]) => items.length);
   const nTop = k.claims.filter((c) => c.level !== "finding").length;
   const claimsTable = () => {
     const rank = { paradigm: 0, thesis: 1 };
@@ -353,7 +362,7 @@ async function renderConcept(slug) {
     <h1 class="detail-title">${esc(k.name)}</h1>
     ${k.description ? `<p class="prose" style="max-width:70ch;margin:0 0 14px">${esc(k.description)}</p>` : ""}
     <div class="meta-row" style="margin-bottom:20px">
-      ${k.parents.length ? `<span>Builds on</span><span class="chips">${k.parents.map((p) => conceptChip(p)).join("")}</span>` : `<span class="faint">Root concept</span>`}
+      ${treeParents.length ? `<span>Part of</span><span class="chips">${treeParents.map((p) => conceptChip(p)).join("")}</span>` : `<span class="faint">Top-level concept</span>`}
       ${curateButtons()}
     </div>
     <div class="grid cols-main-side">
@@ -385,9 +394,14 @@ async function renderConcept(slug) {
         </div>
       </div>
       <div class="grid">
+        ${hood.length ? `<div class="card">
+          <h2>Neighbourhood</h2>
+          ${hood.map(([title, hint, items]) => `<div class="hood-group"><h3>${title} <span>${hint}</span></h3>
+            <div class="chips">${items.map((c) => conceptChip(c)).join("")}</div></div>`).join("")}
+        </div>` : ""}
         <div class="card">
-          <h2>Sub-concepts <span class="count">${k.children.length}</span></h2>
-          ${k.children.length ? `<div class="chips">${k.children.map((c) => conceptChip(c)).join("")}</div>` : `<div class="empty">None.</div>`}
+          <h2>Inside it <span class="count">${subConcepts.length}</span><span class="hint">parts and special cases</span></h2>
+          ${subConcepts.length ? `<div class="chips">${subConcepts.map((c) => conceptChip(c)).join("")}</div>` : `<div class="empty">None.</div>`}
         </div>
         <div class="card" id="dupes-slot"></div>
         ${notesPanel("concept", k.slug, k.notes)}

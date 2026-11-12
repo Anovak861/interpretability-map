@@ -30,6 +30,26 @@ def init(conn: sqlite3.Connection) -> None:
     _add_column(conn, "documents", "curated", "INTEGER NOT NULL DEFAULT 0")
     _add_column(conn, "claims", "level", "TEXT")   # paradigm / thesis / finding; NULL = not sorted yet
     conn.execute("INSERT OR IGNORE INTO users (handle, display_name) VALUES ('me', 'Me')")
+    # concept_relations gained relation types; SQLite can't alter a CHECK, so rebuild the table once
+    sql = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'concept_relations'").fetchone()[0]
+    if "related_to" not in sql:
+        conn.commit()
+        conn.executescript("""
+            PRAGMA foreign_keys = OFF;
+            BEGIN;
+            ALTER TABLE concept_relations RENAME TO concept_relations_old;
+            CREATE TABLE concept_relations (
+                child_id  INTEGER NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
+                parent_id INTEGER NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
+                relation  TEXT NOT NULL DEFAULT 'subtopic_of'
+                          CHECK (relation IN ('subtopic_of','builds_on','alternative_to','uses','related_to')),
+                PRIMARY KEY (child_id, parent_id, relation)
+            );
+            INSERT INTO concept_relations SELECT * FROM concept_relations_old;
+            DROP TABLE concept_relations_old;
+            COMMIT;
+            PRAGMA foreign_keys = ON;
+        """)
     conn.commit()
 
 
@@ -281,6 +301,7 @@ def ingest_extraction(conn, ex: Extraction, *, full_text: Optional[str] = None,
                     UNION
                     SELECT r.parent_id FROM concept_relations r
                     JOIN ancestors a ON r.child_id = a.id
+                    WHERE r.relation = 'subtopic_of'
                 )
                 SELECT 1 FROM ancestors WHERE id = ? LIMIT 1
                 """, (parent_id, cid)).fetchone()
@@ -294,11 +315,16 @@ def ingest_extraction(conn, ex: Extraction, *, full_text: Optional[str] = None,
             conn.execute("INSERT OR IGNORE INTO concept_relations (child_id, parent_id) VALUES (?, ?)",
                          (cid, parent_id))
 
+    filed = []   # new claims, linked to their parents once every claim in the extraction exists
     for cl in ex.claims:
         slug = claim(cl.slug)
         if slug is None:
             continue
+        is_new = _id_by_slug(conn, "claims", slug) is None
         claim_id = upsert_claim(conn, slug, cl.statement, cl.claim_type, cl.scope)
+        if is_new:
+            conn.execute("UPDATE claims SET level = ? WHERE id = ?", (cl.level or "finding", claim_id))
+            filed.append((claim_id, cl))
         for c in filter(None, map(concept, cl.concepts)):
             conn.execute("INSERT OR IGNORE INTO claim_concepts VALUES (?, ?)", (claim_id, ensure_concept(conn, c)))
         for dep in filter(None, map(claim, cl.depends_on)):
@@ -312,6 +338,12 @@ def ingest_extraction(conn, ex: Extraction, *, full_text: Optional[str] = None,
             (claim_id, doc_id, cl.relation, cl.strength, cl.experiment_summary,
              json.dumps(cl.models_studied) if cl.models_studied else None, cl.location, ex.provenance),
         )
+
+    for claim_id, cl in filed:
+        parent = claim(cl.under) if cl.under and cl.stance and cl.level != "thesis" else None
+        row = conn.execute("SELECT id, level FROM claims WHERE slug = ?", (parent,)).fetchone() if parent else None
+        if row and row["id"] != claim_id and row["level"] in ("paradigm", "thesis"):
+            conn.execute("INSERT OR REPLACE INTO claim_links VALUES (?, ?, ?, ?)", (claim_id, row["id"], cl.stance, ex.provenance))
 
     for ref in ex.references:
         add_reference(conn, doc_id, ref, ex.provenance)
@@ -545,7 +577,10 @@ def relevant_vocabulary(conn, doc_id: Optional[int], title: str, abstract: str =
     import math
     from collections import Counter
 
-    claims = {r["id"]: dict(r) for r in conn.execute("SELECT id, slug, statement, scope FROM claims")}
+    claims = {r["id"]: dict(r) for r in conn.execute("SELECT id, slug, statement, scope, level FROM claims")}
+    if any(c["level"] in ("paradigm", "thesis") for c in claims.values()):
+        # once the map is sorted, findings are not reuse targets: evidence lands on broad claims
+        claims = {i: c for i, c in claims.items() if c["level"] in ("paradigm", "thesis")}
     shared = dict(conn.execute("SELECT claim_id, COUNT(DISTINCT document_id) FROM claim_evidence GROUP BY claim_id"))
     picked: dict[int, str] = {}
 
@@ -604,12 +639,13 @@ def relevant_vocabulary(conn, doc_id: Optional[int], title: str, abstract: str =
         near[cid] += 4 * len(overlap)
     top = [cid for cid, _ in near.most_common(max_concepts)]
     return {
-        "claims": [{"slug": claims[i]["slug"], "statement": claims[i]["statement"]}
+        "claims": [{"slug": claims[i]["slug"], "statement": claims[i]["statement"],
+                    **({"level": claims[i]["level"]} if claims[i]["level"] else {})}
                    for i in sorted(picked, key=lambda i: claims[i]["slug"])],
         "concepts": [{"slug": concepts[c]["slug"], "name": concepts[c]["name"], "kind": concepts[c]["kind"]}
                      for c in sorted(top, key=lambda c: concepts[c]["slug"])],
         "other_concept_slugs": sorted(c["slug"] for cid, c in concepts.items() if cid not in set(top)),
-        "note": (f"Showing the {len(picked)} existing claims most relevant to this document (of {len(claims)}); "
+        "note": (f"Showing the {len(picked)} existing paradigms and broad claims most relevant to this document (of {len(claims)}); "
                  "reuse them where they fit. other_concept_slugs lists every other existing concept."),
     }
 

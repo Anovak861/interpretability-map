@@ -135,7 +135,7 @@ def claim_health(conn) -> dict[int, ClaimHealth]:
 
 def concept_descendants(conn) -> dict[int, set[int]]:
     children = defaultdict(set)
-    for r in conn.execute("SELECT child_id, parent_id FROM concept_relations"):
+    for r in conn.execute("SELECT child_id, parent_id FROM concept_relations WHERE relation = 'subtopic_of'"):
         children[r[1]].add(r[0])
     result = {}
     for (cid,) in conn.execute("SELECT id FROM concepts"):

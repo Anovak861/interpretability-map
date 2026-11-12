@@ -117,7 +117,7 @@ class MergeReview(BaseModel):
 def _acyclic_after_merge(conn, source: int, target: int) -> bool:
     # db.merge removes direct self-edges. Check all remaining relations conservatively.
     edges = {}
-    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations"):
+    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations WHERE relation = 'subtopic_of'"):
         child = target if child == source else child
         parent = target if parent == source else parent
         if child != parent:

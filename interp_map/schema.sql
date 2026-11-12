@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS concept_relations (
     child_id  INTEGER NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
     parent_id INTEGER NOT NULL REFERENCES concepts(id) ON DELETE CASCADE,
     relation  TEXT NOT NULL DEFAULT 'subtopic_of'
-              CHECK (relation IN ('subtopic_of','builds_on','alternative_to')),
+              CHECK (relation IN ('subtopic_of','builds_on','alternative_to','uses','related_to')),
     PRIMARY KEY (child_id, parent_id, relation)
 );
 

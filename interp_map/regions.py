@@ -108,7 +108,7 @@ def minor_regions(conn, concept_region: dict[int, str], docs_of, desc, names, sl
     """Group concepts no main region claimed under their top-level area (the concept just
     below a root), so the concept map has no loose ends. Groups of one are left alone."""
     parents = defaultdict(set)
-    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations"):
+    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations WHERE relation = 'subtopic_of'"):
         parents[child].add(parent)
     roots = {c for c in names if not parents[c]}
 
@@ -148,7 +148,7 @@ def assign_documents(regions: list[Region], roles: dict[int, dict[int, str]]) ->
 def assign_concepts(conn, regions: list[Region], chosen: list[int]) -> dict[int, str]:
     """Each concept's region: the nearest region concept above it (or itself)."""
     parents = defaultdict(set)
-    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations"):
+    for child, parent in conn.execute("SELECT child_id, parent_id FROM concept_relations WHERE relation = 'subtopic_of'"):
         parents[child].add(parent)
     region_of = {c: r.slug for c, r in zip(chosen, regions)}
     size = {r.slug: len(r.documents) for r in regions}

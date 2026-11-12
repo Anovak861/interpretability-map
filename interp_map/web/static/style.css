@@ -628,3 +628,6 @@ a.btn.primary { color: var(--on-accent); }
   align-content: start; color: inherit; text-decoration: none; }
 .thesis:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
 .paradigm:focus-visible, .thesis:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.hood-group + .hood-group { margin-top: 14px; }
+.hood-group h3 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.hood-group h3 span { font-weight: 400; color: var(--faint); font-size: 12px; margin-left: 4px; }
